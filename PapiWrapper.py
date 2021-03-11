@@ -839,7 +839,7 @@ class PapiWrapper(object):
         return propertiesListResponse
 
 
-    def listHostnames(self,session,propertyId='optional',version='optional',contractId='optional',groupId='optional'):
+    def listHostnames(self,session,propertyId,version,contractId,groupId):
         """
         Function to fetch all properties
 
@@ -855,14 +855,11 @@ class PapiWrapper(object):
         -------
         hostNameList : hostName List object
         """
-        if contractId == 'optional' and groupId == 'optional' and propertyId == 'optional'and version == 'optional':
-            #update code to fetch group and contract info
-            pass
-        else:
-            hostnameListUrl = 'https://' + self.access_hostname + '/papi/v1/properties/' + propertyId + '/versions/' + str(version) + '/hostnames'+ '?contractId=' + contractId + '&groupId=' + groupId
-            hostnameListUrl = self.formUrl(hostnameListUrl)
 
-            hostnameListResponse = session.get(hostnameListUrl)
+        hostnameListUrl = 'https://' + self.access_hostname + '/papi/v1/properties/' + propertyId + '/versions/' + str(version) + '/hostnames'+ '?contractId=' + contractId + '&groupId=' + groupId
+        hostnameListUrl = self.formUrl(hostnameListUrl)
+
+        hostnameListResponse = session.get(hostnameListUrl)
         return hostnameListResponse
 
     def formUrl(self, url):

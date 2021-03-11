@@ -1,0 +1,81 @@
+
+                <head>
+                    <link href="https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator.min.css" rel="stylesheet">
+                    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.min.js"></script>
+                    <script type="text/javascript" src="https://oss.sheetjs.com/sheetjs/xlsx.full.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.5/jspdf.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.0.5/jspdf.plugin.autotable.js"></script>
+
+                </head>
+
+                <body>
+                    <div>
+                        <button id="download-csv">Download CSV</button>
+                        <button id="download-json">Download JSON</button>
+                        <button id="download-xlsx">Download XLSX</button>
+                        <button id="download-pdf">Download PDF</button>
+                        <button id="download-html">Download HTML</button>
+                    </div>                
+                    <h2>Property Audit Report</h2>
+                    <div id="example-table"></div>
+
+                    <script>
+                            var table = new Tabulator("#example-table", {
+                            height:"700px",
+                            layout:"fitColumns",
+                            pagination:"local",
+                            paginationSize:100,
+                            paginationSizeSelector:[25, 50, 100],
+                            movableColumns:true,
+                            columns: 
+                    [
+                        {title:"Property Name", field:"propertyName", headerFilter:"input"},
+                        {title:"Group ID", field:"groupId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Group Name", field:"groupName", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Contract ID", field:"contractId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Version", field:"latestVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Hostnames", field:"lat_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Staging Version", field:"stagingVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Staging Hostnames", field:"stg_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Production Hostnames", field:"prd_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                    ]
+        ,
+                            });
+
+                            var None = 'None'
+                            var tableData = [{'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_242699', 'propertyName': 'sfdcstatic.com_pm_clone', 'latestVersion': 1, 'stagingVersion': None, 'productionVersion': None, 'assetId': 'aid_10332315', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['c-stg.sfdcstatic.com', 'c.sfdcstatic.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_151712', 'propertyName': 'sfdcstatic.com_pm', 'latestVersion': 66, 'stagingVersion': 66, 'productionVersion': 65, 'assetId': 'aid_5601106', 'note': 'c', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['cms-stg.sfdcstatic.com', 'www.sfdcstatic.com', 'www2.sfdcstatic.com'], 'stg_hostnames': ['cms-stg.sfdcstatic.com', 'www.sfdcstatic.com', 'www2.sfdcstatic.com'], 'prd_hostnames': ['cms-stg.sfdcstatic.com', 'secure.sfdcstatic.com', 'secure2.sfdcstatic.com', 'www.sfdcstatic.com', 'www2.sfdcstatic.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_198234', 'propertyName': 'a.sfdcstatic.com', 'latestVersion': 57, 'stagingVersion': 56, 'productionVersion': 56, 'assetId': 'aid_8757768', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['a.sfdcstatic.com'], 'stg_hostnames': ['a.sfdcstatic.com'], 'prd_hostnames': ['a.sfdcstatic.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_562894', 'propertyName': 'www.sfdctest1.com', 'latestVersion': 4, 'stagingVersion': 4, 'productionVersion': 1, 'assetId': 'aid_10710317', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['sfdctest1.com', 'www.sfdctest1.com'], 'stg_hostnames': ['sfdctest1.com', 'www.sfdctest1.com'], 'prd_hostnames': ['sfdctest1.com', 'www.sfdctest1.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_206843', 'propertyName': 'c.salesforce.com', 'latestVersion': 31, 'stagingVersion': 31, 'productionVersion': 31, 'assetId': 'aid_9147460', 'note': 'c.salesforce.com', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['c-blitz01.salesforce.com', 'c-blitz02.salesforce.com', 'c-blitz03.salesforce.com', 'c-blitz04.salesforce.com', 'c-web-stg.salesforce.com', 'c.salesforce.com'], 'stg_hostnames': ['c-blitz01.salesforce.com', 'c-blitz02.salesforce.com', 'c-blitz03.salesforce.com', 'c-blitz04.salesforce.com', 'c-web-stg.salesforce.com', 'c.salesforce.com'], 'prd_hostnames': ['c-blitz01.salesforce.com', 'c-blitz02.salesforce.com', 'c-blitz03.salesforce.com', 'c-blitz04.salesforce.com', 'c-web-stg.salesforce.com', 'c.salesforce.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_157620', 'propertyName': 'docs.salesforce.com', 'latestVersion': 32, 'stagingVersion': 32, 'productionVersion': 32, 'assetId': 'aid_6211180', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['resources.docs.salesforce.com'], 'stg_hostnames': ['resources.docs.salesforce.com'], 'prd_hostnames': ['resources.docs.salesforce.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_600685', 'propertyName': 'www.salesforceconnections.com', 'latestVersion': 9, 'stagingVersion': 9, 'productionVersion': 9, 'assetId': 'aid_10774557', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['salesforceconnections.com', 'trailheadx.com', 'www.clicksoftware.com', 'www.salesforceconnections.com', 'www.trailheadx.com'], 'stg_hostnames': ['salesforceconnections.com', 'trailheadx.com', 'www.clicksoftware.com', 'www.salesforceconnections.com', 'www.trailheadx.com'], 'prd_hostnames': ['salesforceconnections.com', 'trailheadx.com', 'www.clicksoftware.com', 'www.salesforceconnections.com', 'www.trailheadx.com']}, {'accountId': 'act_F-AC-1849292', 'contractId': 'ctr_C-64GBNJ', 'groupId': 'grp_29826', 'propertyId': 'prp_244097', 'propertyName': 'c.sfdcstatic.com_pm', 'latestVersion': 120, 'stagingVersion': 120, 'productionVersion': 120, 'assetId': 'aid_10333760', 'groupName': 'WWW , Marketing - C-64GBNJ', 'lat_hostnames': ['c1-perf1.sfdcstatic.com', 'c1-perf2.sfdcstatic.com', 'c1-qa1.sfdcstatic.com', 'c1-qa2.sfdcstatic.com', 'c1-stg.sfdcstatic.com', 'c1-uat1.sfdcstatic.com', 'c1.sfdcstatic.com', 'c2-stg.sfdcstatic.com', 'c2.sfdcstatic.com'], 'stg_hostnames': ['c1-perf1.sfdcstatic.com', 'c1-perf2.sfdcstatic.com', 'c1-qa1.sfdcstatic.com', 'c1-qa2.sfdcstatic.com', 'c1-stg.sfdcstatic.com', 'c1-uat1.sfdcstatic.com', 'c1.sfdcstatic.com', 'c2-stg.sfdcstatic.com', 'c2.sfdcstatic.com'], 'prd_hostnames': ['c1-perf1.sfdcstatic.com', 'c1-perf2.sfdcstatic.com', 'c1-qa1.sfdcstatic.com', 'c1-qa2.sfdcstatic.com', 'c1-stg.sfdcstatic.com', 'c1-uat1.sfdcstatic.com', 'c1.sfdcstatic.com', 'c2-stg.sfdcstatic.com', 'c2.sfdcstatic.com']}]
+
+                            table.setData(tableData);            
+
+                            //trigger download of data.csv file
+                            document.getElementById("download-csv").addEventListener("click", function(){
+                                table.download("csv", "data.csv");
+                            });
+
+                            //trigger download of data.json file
+                            document.getElementById("download-json").addEventListener("click", function(){
+                                table.download("json", "data.json");
+                            });
+
+                            //trigger download of data.xlsx file
+                            document.getElementById("download-xlsx").addEventListener("click", function(){
+                                table.download("xlsx", "data.xlsx", {sheetName:"My Data"});
+                            });
+
+                            //trigger download of data.pdf file
+                            document.getElementById("download-pdf").addEventListener("click", function(){
+                                table.download("pdf", "data.pdf", {
+                                    orientation:"portrait", //set page orientation to portrait
+                                    title:"Example Report", //add title to report
+                                });
+                            });
+
+                            //trigger download of data.html file
+                            document.getElementById("download-html").addEventListener("click", function(){
+                                table.download("html", "data.html", {style:true});
+                            });                            
+                    </script>    
+
+                </body>
+        

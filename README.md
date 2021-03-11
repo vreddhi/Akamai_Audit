@@ -1,13 +1,10 @@
-# RuleUpdater
+# Audit
 
-Python script to add/delete rules in Akamai delivery configuration. The script can:
-- Add a new rule after/before a rule.
-- Delete a rule
-- Replace a rule
-- Download a Rule
-- Add a bahevior
-- Delete a behavior
-- List all the rules
+Python script to audits groups and properties. The script can:
+- List all groups
+- List all properties
+- WAF Protection Status
+
 
 ## Installation
 
@@ -23,11 +20,11 @@ pip3 install logging
 ## Usage
 
 ```python
-python3 RuleUpdater.py 
+python3 Audit.py 
 
-usage: RuleUpdater.py [command] [--version]  ...
+usage: Audit.py [command] [--version]  ...
 
-Akamai CLI for RuleUpdater
+Akamai CLI for Audit
 
 optional arguments:
   --version       show program's version number and exit
@@ -48,7 +45,7 @@ Commands:
 
 ## To get help on Individual command
 ```sh
-python3 RuleUpdater.py help <command>
+python3 Audit.py help <command>
 ```
 
 ```
