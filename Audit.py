@@ -15,7 +15,7 @@ Copyright 2017 Akamai Technologies, Inc. All Rights Reserved.
 """
 This code leverages akamai OPEN API. to control Certificates deployed in Akamai Network.
 In case you need quick explanation contact the initiators.
-Initiators: vbhat@akamai.com, aetsai@akamai.com, mkilmer@akamai.com
+Initiators: vbhat@akamai.com
 """
 
 import json
@@ -320,6 +320,59 @@ def list_groups(args):
             
     else:
        root_logger.info('Unable to fetch group details\n')
+       
+
+def process_properties(session, papiObject, everyGroup, all_properties):
+    root_logger.info('  ..Processing the group: ' + everyGroup['groupName'])                    
+    properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
+    root_logger.info('Total of ' + str(len(properties_response.json()['properties']['items'])) + ' properties found.')
+    counter = 1
+    for everyProperty in properties_response.json()['properties']['items']:
+        root_logger.info('  ..Processing ' + str(counter) + ' of ' + str(len(properties_response.json()['properties']['items'])))
+        counter += 1
+        everyProperty['groupName'] = everyGroup['groupName']
+
+        #Get the hostnames of latest version
+        hostname_list = []
+        if everyProperty['latestVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['latestVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+            everyProperty['lat_hostnames'] = hostname_list 
+
+        #Get the hostnames of staging version
+        hostname_list = []
+        if everyProperty['stagingVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['stagingVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+            everyProperty['stg_hostnames'] = hostname_list 
+
+        #Get the hostnames of production version
+        hostname_list = []
+        if everyProperty['productionVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['productionVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+            everyProperty['prd_hostnames'] = hostname_list                             
+
+        all_properties.append(everyProperty)      
+        return all_properties
 
 def list_properties(args):
     access_hostname, session = init_config(args.edgerc, args.section)
@@ -332,76 +385,20 @@ def list_properties(args):
     #Find the property details (IDs)
     if groupsResponse.status_code == 200:
         groupsResponseDetails = groupsResponse.json()
-        all_properties = []
         root_logger.info('Total of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups found')
         counter = 1
 
         for everyGroup in groupsResponseDetails['groups']['items']:
             if not args.groupId and not args.groupName:
-                root_logger.info('Processing ' + str(counter) + ' group of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups')
-                counter += 1
-                properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
-                for everyProperty in properties_response.json()['properties']['items']:
-                    everyProperty['groupName'] = everyGroup['groupName']
-                    all_properties.append(everyProperty)
+                all_properties = process_properties(session, papiObject, everyGroup, [])
             elif args.groupId:
                 if args.groupId == everyGroup['groupId']:
                     root_logger.info('  ..Found the group: ' + str(args.groupId))
-                    root_logger.info('  ..Processing the group: ' + everyGroup['groupName'])                    
-                    properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
-                    root_logger.info('Total of ' + str(len(properties_response.json()['properties']['items'])) + ' properties found.')
-                    counter = 1
-                    for everyProperty in properties_response.json()['properties']['items']:
-                        root_logger.info('  ..Processing ' + str(counter) + ' of ' + str(len(properties_response.json()['properties']['items'])))
-                        counter += 1
-                        everyProperty['groupName'] = everyGroup['groupName']
-
-                        #Get the hostnames of latest version
-                        hostname_list = []
-                        if everyProperty['latestVersion']:
-                            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['latestVersion'], everyProperty['contractId'], everyProperty['groupId'])
-                            if hostnames_response.status_code == 200:
-                                hostnames = hostnames_response.json()['hostnames']['items']
-                                hostname_list = []
-                                for every_hostname in hostnames:
-                                    hostname_list.append(every_hostname['cnameFrom'])
-                            else:
-                                root_logger.info('Unable to fetch hostnames\n')        
-                            everyProperty['lat_hostnames'] = hostname_list 
-
-                        #Get the hostnames of staging version
-                        hostname_list = []
-                        if everyProperty['stagingVersion']:
-                            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['stagingVersion'], everyProperty['contractId'], everyProperty['groupId'])
-                            if hostnames_response.status_code == 200:
-                                hostnames = hostnames_response.json()['hostnames']['items']
-                                hostname_list = []
-                                for every_hostname in hostnames:
-                                    hostname_list.append(every_hostname['cnameFrom'])
-                            else:
-                                root_logger.info('Unable to fetch hostnames\n')        
-                            everyProperty['stg_hostnames'] = hostname_list 
-
-                        #Get the hostnames of production version
-                        hostname_list = []
-                        if everyProperty['productionVersion']:
-                            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['productionVersion'], everyProperty['contractId'], everyProperty['groupId'])
-                            if hostnames_response.status_code == 200:
-                                hostnames = hostnames_response.json()['hostnames']['items']
-                                hostname_list = []
-                                for every_hostname in hostnames:
-                                    hostname_list.append(every_hostname['cnameFrom'])
-                            else:
-                                root_logger.info('Unable to fetch hostnames\n')        
-                            everyProperty['prd_hostnames'] = hostname_list                             
-
-                        all_properties.append(everyProperty)                      
+                    all_properties = process_properties(session, papiObject, everyGroup, [])                      
             elif args.groupName:
                 if args.groupName in everyGroup['groupName']:
-                    properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
-                    for everyProperty in properties_response.json()['properties']['items']:
-                        everyProperty['groupName'] = everyGroup['groupName']
-                        all_properties.append(everyProperty)                    
+                    root_logger.info('  ..Found the group: ' + str(args.groupId))
+                    all_properties = process_properties(session, papiObject, everyGroup, [])                      
             
         columns = '''
                     [
