@@ -31,7 +31,7 @@ import os
 import logging
 import helper
 import re
-import shutil
+import dns.resolver 
 
 
 PACKAGE_VERSION = "1.0.8"
@@ -99,7 +99,7 @@ def cli():
         prog += " [command]"
 
     parser = argparse.ArgumentParser(
-        description='Akamai CLI for RuleUpdater',
+        description='Akamai CLI for Salesforce Audits',
         add_help=False,
         prog=prog)
     parser.add_argument(
@@ -134,6 +134,11 @@ def cli():
          {"name": "groupName", "help": "Name of the Group"}],
         [])
 
+    actions["check_hostnames"] = create_sub_command(
+        subparsers, "check-hostnames", "Check hostnames to be onboarded",
+        [{"name": "hostnames", "help": "List of hostnames separated by comma or space within quotes"},
+         {"name": "file", "help": "A csv file with hostnames (No title line)"}],
+        [])
 
     args = parser.parse_args()
 
@@ -386,7 +391,6 @@ def list_properties(args):
     if groupsResponse.status_code == 200:
         groupsResponseDetails = groupsResponse.json()
         root_logger.info('Total of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups found')
-        counter = 1
 
         for everyGroup in groupsResponseDetails['groups']['items']:
             if not args.groupId and not args.groupName:
@@ -420,6 +424,64 @@ def list_properties(args):
     else:
         root_logger.info('Unable to fetch group details\n')
             
+def check_hostnames(args):
+    access_hostname, session = init_config(args.edgerc, args.section)
+    papiObject = PapiWrapper(access_hostname, args.account_key)
+
+    table = PrettyTable(['Hostname', 'Configuration Name',' Property Id', 'Group ID','EdgeHostname','Waf Status'])
+    table.align = "l"
+
+    hostnames = args.hostnames.replace(',',':').replace(' ',':').replace('::',':').split(':')
+    
+    print('Finding details of hostname(s)\n')
+    final_data = []
+    columns = '''
+                [
+                    {title:"Hostname", field:"hostname", headerFilter:"input"},
+                    {title:"Status", field:"car", hozAlign:"center", formatter:"tickCross"},
+                    {title:"Account ID", field:"accountId", headerFilter:"input"},
+                    {title:"Property Name", field:"propertyName", headerFilter:"input"},
+                    {title:"Property Id", field:"propertyId", headerFilter:"input"},
+                    {title:"Group ID", field:"groupId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                    {title:"Contract ID", field:"contractId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                    {title:"Version", field:"propertyVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                    {title:"Staging Status", field:"stagingStatus", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                    {title:"Prod Status", field:"productionStatus", hozAlign:"center", sorter:"date",  headerFilter:"input"}
+                ]
+    '''    
+    title = 'Hostname Audit Report'   
+
+    for each_hostname in hostnames:
+        print('Processing ' + each_hostname + ' ...')
+        #Send a request to Akamai network to check for 200
+
+        url = "https://" + each_hostname + "/"
+        stream = os.popen('curl -s -o /dev/null -w "%{http_code}" -k --connect-to ::e1.a.akamaiedge-staging.net ' + url)
+        output = stream.read()
+        if str(output) != str(400):    
+            hostname_response = papiObject.searchProperty(session, propertyName='optional', hostname=each_hostname, edgeHostname='optional')
+            #print(json.dumps(hostname_response.json(), indent=4))
+
+            if hostname_response.status_code == 200:
+                if len(hostname_response.json()['versions']['items']) > 0:    
+                    for every_hostname_detail in hostname_response.json()['versions']['items']:    
+                        final_data.append(every_hostname_detail)
+                else:
+                    print(' ..Not found in your account.\n')        
+                    hostname_dns_details = {}
+                    hostname_dns_details['hostname'] = each_hostname
+                    hostname_dns_details['accountId'] = 'Unknown'
+                    final_data.append(hostname_dns_details)
+
+        else:
+            print(' ..' + each_hostname + ' is good to onbaord.')                        
+
+    #Tabulate after processing all hostnames
+    tabulate(title, columns, final_data, 'hostnames.html') 
+
+
+                          
+
 
 def get_prog_name():
     prog = os.path.basename(sys.argv[0])
