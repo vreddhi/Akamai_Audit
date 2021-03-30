@@ -99,7 +99,7 @@ def cli():
         prog += " [command]"
 
     parser = argparse.ArgumentParser(
-        description='Akamai CLI for Salesforce Audits',
+        description='Akamai CLI for Property/hostname(s) Audits',
         add_help=False,
         prog=prog)
     parser.add_argument(
@@ -438,7 +438,7 @@ def check_hostnames(args):
     columns = '''
                 [
                     {title:"Hostname", field:"hostname", headerFilter:"input"},
-                    {title:"Status", field:"car", hozAlign:"center", formatter:"tickCross"},
+                    {title:"Status", field:"status", hozAlign:"center", headerFilter:"input", formatter:"tickCross"},
                     {title:"Account ID", field:"accountId", headerFilter:"input"},
                     {title:"Property Name", field:"propertyName", headerFilter:"input"},
                     {title:"Property Id", field:"propertyId", headerFilter:"input"},
@@ -468,12 +468,16 @@ def check_hostnames(args):
                         final_data.append(every_hostname_detail)
                 else:
                     print(' ..Not found in your account.\n')        
-                    hostname_dns_details = {}
-                    hostname_dns_details['hostname'] = each_hostname
-                    hostname_dns_details['accountId'] = 'Unknown'
-                    final_data.append(hostname_dns_details)
+                    hostname_details = {}
+                    hostname_details['hostname'] = each_hostname
+                    hostname_details['accountId'] = 'Unknown'
+                    final_data.append(hostname_details)
 
         else:
+            hostname_details = {}
+            hostname_details['hostname'] = each_hostname
+            hostname_details['status'] = 1
+            final_data.append(hostname_details)
             print(' ..' + each_hostname + ' is good to onbaord.')                        
 
     #Tabulate after processing all hostnames
