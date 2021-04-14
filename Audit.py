@@ -32,6 +32,7 @@ import logging
 import helper
 import re
 import dns.resolver 
+import subprocess
 
 
 PACKAGE_VERSION = "1.0.8"
@@ -138,6 +139,12 @@ def cli():
         subparsers, "check-hostnames", "Check hostnames to be onboarded",
         [{"name": "hostnames", "help": "List of hostnames separated by comma or space within quotes"},
          {"name": "file", "help": "A csv file with hostnames (No title line)"}],
+        [])
+
+    actions["check_cert_expiry"] = create_sub_command(
+        subparsers, "check-cert-expiry", "Check expiration of certificates",
+        [{"name": "groupId", "help": "List of hostnames separated by comma or space within quotes"},
+         {"name": "groupName", "help": "Name of the Group"}],
         [])
 
     args = parser.parse_args()
@@ -330,10 +337,10 @@ def list_groups(args):
 def process_properties(session, papiObject, everyGroup, all_properties):
     root_logger.info('  ..Processing the group: ' + everyGroup['groupName'])                    
     properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
-    root_logger.info('Total of ' + str(len(properties_response.json()['properties']['items'])) + ' properties found.')
+    root_logger.info('      ..Total of ' + str(len(properties_response.json()['properties']['items'])) + ' properties found.')
     counter = 1
     for everyProperty in properties_response.json()['properties']['items']:
-        root_logger.info('  ..Processing ' + str(counter) + ' of ' + str(len(properties_response.json()['properties']['items'])))
+        root_logger.info('          ..Processing ' + str(counter) + ' of ' + str(len(properties_response.json()['properties']['items'])))
         counter += 1
         everyProperty['groupName'] = everyGroup['groupName']
 
@@ -377,12 +384,68 @@ def process_properties(session, papiObject, everyGroup, all_properties):
             everyProperty['prd_hostnames'] = hostname_list                             
 
         all_properties.append(everyProperty)      
-        return all_properties
+    return all_properties
+
+#Function that returns hostnames list for certProvisioningType = DEFAULT
+def list_cert_properties(session, papiObject, everyGroup, all_properties):
+    root_logger.info('  ..Processing the group: ' + everyGroup['groupName'])                    
+    properties_response = papiObject.getAllProperties(session,everyGroup['contractIds'][0],everyGroup['groupId'])
+    root_logger.info('      ..Total of ' + str(len(properties_response.json()['properties']['items'])) + ' properties found.')
+    counter = 1
+    for everyProperty in properties_response.json()['properties']['items']:
+        root_logger.info('          ..Processing ' + str(counter) + ' of ' + str(len(properties_response.json()['properties']['items'])))
+        counter += 1
+        everyProperty['groupName'] = everyGroup['groupName']
+
+        #Get the hostnames of latest version
+        hostname_list = []
+        if everyProperty['latestVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['latestVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    if every_hostname['certProvisioningType'] == 'DEFAULT':
+                        hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+        everyProperty['lat_hostnames'] = hostname_list 
+
+        #Get the hostnames of staging version
+        hostname_list = []
+        if everyProperty['stagingVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['stagingVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    if every_hostname['certProvisioningType'] == 'DEFAULT':
+                        hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+        everyProperty['stg_hostnames'] = hostname_list 
+
+        #Get the hostnames of production version
+        hostname_list = []
+        if everyProperty['productionVersion']:
+            hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['productionVersion'], everyProperty['contractId'], everyProperty['groupId'])
+            if hostnames_response.status_code == 200:
+                hostnames = hostnames_response.json()['hostnames']['items']
+                hostname_list = []
+                for every_hostname in hostnames:
+                    if every_hostname['certProvisioningType'] == 'DEFAULT':
+                        hostname_list.append(every_hostname['cnameFrom'])
+            else:
+                root_logger.info('Unable to fetch hostnames\n')        
+        everyProperty['prd_hostnames'] = hostname_list                             
+
+        all_properties.append(everyProperty)      
+    return all_properties
 
 def list_properties(args):
     access_hostname, session = init_config(args.edgerc, args.section)
     papiObject = PapiWrapper(access_hostname, args.account_key)
-
+    all_properties = []
     table = PrettyTable(['Group Name', 'Group ID'])
     table.align = "l"
 
@@ -394,7 +457,9 @@ def list_properties(args):
 
         for everyGroup in groupsResponseDetails['groups']['items']:
             if not args.groupId and not args.groupName:
-                all_properties = process_properties(session, papiObject, everyGroup, [])
+                list_of_properties = process_properties(session, papiObject, everyGroup, [])
+                for every_property in list_of_properties:
+                    all_properties.append(every_property)
             elif args.groupId:
                 if args.groupId == everyGroup['groupId']:
                     root_logger.info('  ..Found the group: ' + str(args.groupId))
@@ -402,7 +467,7 @@ def list_properties(args):
             elif args.groupName:
                 if args.groupName in everyGroup['groupName']:
                     root_logger.info('  ..Found the group: ' + str(args.groupId))
-                    all_properties = process_properties(session, papiObject, everyGroup, [])                      
+                    all_properties = process_properties(session, papiObject, everyGroup, [])                     
             
         columns = '''
                     [
@@ -484,7 +549,67 @@ def check_hostnames(args):
     tabulate(title, columns, final_data, 'hostnames.html') 
 
 
-                          
+def check_cert_expiry(args):
+    access_hostname, session = init_config(args.edgerc, args.section)
+    papiObject = PapiWrapper(access_hostname, args.account_key)
+    all_properties = []
+    table = PrettyTable(['Group Name', 'Group ID'])
+    table.align = "l"
+
+    groupsResponse = papiObject.getGroups(session)
+    #Find the property details (IDs)
+    if groupsResponse.status_code == 200:
+        groupsResponseDetails = groupsResponse.json()
+        root_logger.info('Total of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups found')
+
+        for everyGroup in groupsResponseDetails['groups']['items']:
+            if not args.groupId and not args.groupName:
+                list_of_properties = list_cert_properties(session, papiObject, everyGroup, [])
+                for every_property in list_of_properties:
+                    all_properties.append(every_property)
+            elif args.groupId:
+                if args.groupId == everyGroup['groupId']:
+                    root_logger.info('  ..Found the group: ' + str(args.groupId))
+                    all_properties = list_cert_properties(session, papiObject, everyGroup, [])                      
+            elif args.groupName:
+                if args.groupName in everyGroup['groupName']:
+                    root_logger.info('  ..Found the group: ' + str(args.groupId))
+                    all_properties = list_cert_properties(session, papiObject, everyGroup, [])  
+                    #print(json.dumps(all_properties, indent=4))  
+
+        for every_property in all_properties:
+            #print(every_property)
+            for every_hostname in every_property['prd_hostnames']:
+                host_port = every_hostname + ':443'
+                #command = ['echo', '|', 'openssl', 's_client', '-servername', every_hostname, '-connect', host_port, '2>/dev/null', '|', 'openssl', 'x509', '-noout', '-dates', '|' ,'grep', 'notAfter']
+                command = 'echo | openssl s_client -servername ' + every_hostname + ' -connect ' + host_port + ' 2>/dev/null | openssl x509 -noout -dates | grep notAfter'
+                expiry_date = str(subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read())
+                if 'notAfter' in expiry_date:
+                    expiry_date = expiry_date.split('=')[1].replace('\n','')
+                else:
+                    expiry_date = 'Invalid Certificate'
+
+                print(every_hostname + ' : ' + expiry_date)        
+            
+        columns = '''
+                    [
+                        {title:"Property Name", field:"propertyName", headerFilter:"input"},
+                        {title:"Group ID", field:"groupId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Group Name", field:"groupName", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Contract ID", field:"contractId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Version", field:"latestVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Hostnames", field:"lat_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Staging Version", field:"stagingVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Staging Hostnames", field:"stg_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Production Hostnames", field:"prd_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                    ]
+        '''    
+        title = 'Property Audit Report'        
+        tabulate(title, columns, all_properties, 'properties.html') 
+            
+    else:
+        root_logger.info('Unable to fetch group details\n')                        
 
 
 def get_prog_name():
