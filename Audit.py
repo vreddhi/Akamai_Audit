@@ -430,6 +430,7 @@ def list_cert_properties(session, papiObject, everyGroup, all_properties):
         if everyProperty['productionVersion']:
             hostnames_response = papiObject.listHostnames(session, everyProperty['propertyId'], everyProperty['productionVersion'], everyProperty['contractId'], everyProperty['groupId'])
             if hostnames_response.status_code == 200:
+                #print(json.dumps(hostnames_response.json(), indent=4))
                 hostnames = hostnames_response.json()['hostnames']['items']
                 hostname_list = []
                 for every_hostname in hostnames:
@@ -576,20 +577,43 @@ def check_cert_expiry(args):
                     root_logger.info('  ..Found the group: ' + str(args.groupId))
                     all_properties = list_cert_properties(session, papiObject, everyGroup, [])  
                     #print(json.dumps(all_properties, indent=4))  
-
+        
+        final_list_of_properties = []
         for every_property in all_properties:
-            #print(every_property)
-            for every_hostname in every_property['prd_hostnames']:
-                host_port = every_hostname + ':443'
-                #command = ['echo', '|', 'openssl', 's_client', '-servername', every_hostname, '-connect', host_port, '2>/dev/null', '|', 'openssl', 'x509', '-noout', '-dates', '|' ,'grep', 'notAfter']
-                command = 'echo | openssl s_client -servername ' + every_hostname + ' -connect ' + host_port + ' 2>/dev/null | openssl x509 -noout -dates | grep notAfter'
-                expiry_date = str(subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read())
-                if 'notAfter' in expiry_date:
-                    expiry_date = expiry_date.split('=')[1].replace('\n','')
-                else:
-                    expiry_date = 'Invalid Certificate'
+            if 'prd_hostnames' in every_property:
+                if len(every_property['prd_hostnames']) != 0:    
+                    #print(json.dumps(every_property, indent=4))
+                    #Split the hostnames as seperate item
+                    for every_hostname in every_property['prd_hostnames']:
+                        print(every_hostname)
+                        individual_item = dict(every_property)
+                        del individual_item['lat_hostnames']
+                        del individual_item['stg_hostnames']
+                        del individual_item['prd_hostnames']
+                        individual_item['hostname'] = every_hostname
 
-                print(every_hostname + ' : ' + expiry_date)        
+                        host_port = every_hostname + ':443'
+                        #command = ['echo', '|', 'openssl', 's_client', '-servername', every_hostname, '-connect', host_port, '2>/dev/null', '|', 'openssl', 'x509', '-noout', '-dates', '|' ,'grep', 'notAfter']
+                        command = 'echo | openssl s_client -servername ' + every_hostname + ' -connect ' + host_port + ' 2>/dev/null | openssl x509 -noout -dates | grep notAfter'
+                        expiry_date = str(subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read())
+                        if 'notAfter' in expiry_date:
+                            expiry_date = expiry_date.split('=')[1].split('\\')[0]
+                        else:
+                            expiry_date = 'Invalid Certificate'
+                        
+                        #Add expiry info to dict    
+                        individual_item['expiry'] = expiry_date
+                        #Append new item to final list
+                        final_list_of_properties.append(individual_item)                    
+
+                else:
+                    #No hostnames found
+                    pass
+            else:
+                #No SBD hostnames
+                pass
+
+        #print(json.dumps(final_list_of_properties, indent=4))        
             
         columns = '''
                     [
@@ -597,16 +621,14 @@ def check_cert_expiry(args):
                         {title:"Group ID", field:"groupId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
                         {title:"Group Name", field:"groupName", hozAlign:"center", sorter:"date",  headerFilter:"input"},
                         {title:"Contract ID", field:"contractId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
-                        {title:"Latest Version", field:"latestVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
-                        {title:"Latest Hostnames", field:"lat_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
                         {title:"Staging Version", field:"stagingVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
-                        {title:"Staging Hostnames", field:"stg_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
                         {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
-                        {title:"Production Hostnames", field:"prd_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Hostname", field:"hostname", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Expiry", field:"expiry", hozAlign:"center", sorter:"date",  headerFilter:"input"}
                     ]
         '''    
         title = 'Property Audit Report'        
-        tabulate(title, columns, all_properties, 'properties.html') 
+        tabulate(title, columns, final_list_of_properties, 'properties.html') 
             
     else:
         root_logger.info('Unable to fetch group details\n')                        
