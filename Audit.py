@@ -33,6 +33,8 @@ import helper
 import re
 import dns.resolver 
 import subprocess
+import datetime
+from datetime import date
 
 
 PACKAGE_VERSION = "1.0.8"
@@ -579,13 +581,15 @@ def check_cert_expiry(args):
                     #print(json.dumps(all_properties, indent=4))  
         
         final_list_of_properties = []
+        format = "%b %d %H:%M:%S %Y GMT"
+
         for every_property in all_properties:
             if 'prd_hostnames' in every_property:
                 if len(every_property['prd_hostnames']) != 0:    
                     #print(json.dumps(every_property, indent=4))
                     #Split the hostnames as seperate item
                     for every_hostname in every_property['prd_hostnames']:
-                        print(every_hostname)
+                        #print(every_hostname)
                         individual_item = dict(every_property)
                         del individual_item['lat_hostnames']
                         del individual_item['stg_hostnames']
@@ -601,8 +605,17 @@ def check_cert_expiry(args):
                         else:
                             expiry_date = 'Invalid Certificate'
                         
+                        #Calculate the diff
+                        if expiry_date != 'Invalid Certificate':
+                            expiry_date_obj = datetime.datetime.strptime(expiry_date, format).date()
+                            current_date = date.today()
+                            remaining_days = abs((expiry_date_obj - current_date).days)
+                        else:
+                            remaining_days = 'N/A'
+
                         #Add expiry info to dict    
                         individual_item['expiry'] = expiry_date
+                        individual_item['remainingDays'] = remaining_days
                         #Append new item to final list
                         final_list_of_properties.append(individual_item)                    
 
@@ -624,7 +637,8 @@ def check_cert_expiry(args):
                         {title:"Staging Version", field:"stagingVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
                         {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
                         {title:"Hostname", field:"hostname", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
-                        {title:"Expiry", field:"expiry", hozAlign:"center", sorter:"date",  headerFilter:"input"}
+                        {title:"Expiry", field:"expiry", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Reamaining Days", field:"remainingDays", hozAlign:"center", sorter:"date",  headerFilter:"input", headerFilterPlaceholder:"<=",headerFilterFunc:"<="}
                     ]
         '''    
         title = 'Property Audit Report'        
