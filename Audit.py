@@ -35,6 +35,8 @@ import dns.resolver
 import subprocess
 import datetime
 from datetime import date
+import dns
+from dns import resolver
 
 
 PACKAGE_VERSION = "1.0.8"
@@ -616,6 +618,18 @@ def check_cert_expiry(args):
                         #Add expiry info to dict    
                         individual_item['expiry'] = expiry_date
                         individual_item['remainingDays'] = remaining_days
+
+                        #Check CAA record of toplevel domain
+                        individual_item['CAA'] = 'N/A'
+                        try:
+                            domain = every_hostname.partition(".")[-1]
+                            result = dns.resolver.query(domain, 'CAA')
+                            for val in result:
+                                print('CAA: ', val.to_text())
+                                individual_item['CAA'] =  val.to_text()
+                        except:
+                            print('             ..CAA record not found for: ' + domain)        
+
                         #Append new item to final list
                         final_list_of_properties.append(individual_item)                    
 
@@ -638,7 +652,8 @@ def check_cert_expiry(args):
                         {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
                         {title:"Hostname", field:"hostname", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
                         {title:"Expiry", field:"expiry", hozAlign:"center", sorter:"date",  headerFilter:"input"},
-                        {title:"Reamaining Days", field:"remainingDays", hozAlign:"center", sorter:"date",  headerFilter:"input", headerFilterPlaceholder:"<=",headerFilterFunc:"<="}
+                        {title:"Reamaining Days", field:"remainingDays", hozAlign:"center", sorter:"date",  headerFilter:"input", headerFilterPlaceholder:"<=",headerFilterFunc:"<="},
+                        {title:"CAA", field:"CAA", hozAlign:"center", sorter:"date",  headerFilter:"input"}
                     ]
         '''    
         title = 'Property Audit Report'        
