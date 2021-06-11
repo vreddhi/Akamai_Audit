@@ -862,6 +862,30 @@ class PapiWrapper(object):
         hostnameListResponse = session.get(hostnameListUrl)
         return hostnameListResponse
 
+    def createCase(self,session, case_body):
+        """
+        Function to create a Akatec Case
+
+        Parameters
+        ----------
+        session : <string>
+            An EdgeGrid Auth akamai session object
+
+
+        Returns
+        -------
+        caseReponse : caseReponse
+            (caseReponse) Object with all response details.
+        """
+
+        createCaseUrl = 'https://' + self.access_hostname + '/case-management/v2/cases'
+        createCaseUrl = self.formUrl(createCaseUrl)
+
+        createCaseResponse = session.post(createCaseUrl, data=case_body,headers=self.headers)
+        if createCaseResponse.status_code == 201:
+            self.final_response = "SUCCESS"
+        return createCaseResponse        
+
     def formUrl(self, url):
         """
         Function to form URL
@@ -875,4 +899,4 @@ class PapiWrapper(object):
             self.account_switch_key = self.account_switch_key.translate(self.account_switch_key.maketrans('&','?'))
             url = url + self.account_switch_key    
 
-        return url        
+        return url  

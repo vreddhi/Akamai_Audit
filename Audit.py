@@ -151,6 +151,12 @@ def cli():
          {"name": "groupName", "help": "Name of the Group"}],
         [])
 
+    actions["create_case"] = create_sub_command(
+        subparsers, "create-case", "Create Akatec Case",
+        [{"name": "groupId", "help": "List of hostnames separated by comma or space within quotes"},
+         {"name": "groupName", "help": "Name of the Group"}],
+        [])
+
     args = parser.parse_args()
 
     if len(sys.argv) <= 1:
@@ -661,6 +667,94 @@ def check_cert_expiry(args):
             
     else:
         root_logger.info('Unable to fetch group details\n')                        
+
+
+def create_case(args):
+    access_hostname, session = init_config(args.edgerc, args.section)
+    papiObject = PapiWrapper(access_hostname, args.account_key)
+
+    all_properties = []
+    groupsResponse = papiObject.getGroups(session)
+    #Find the property details (IDs)
+    if groupsResponse.status_code == 200:
+        groupsResponseDetails = groupsResponse.json()
+        root_logger.info('Total of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups found')
+
+        for everyGroup in groupsResponseDetails['groups']['items']:
+            if not args.groupId and not args.groupName:
+                list_of_properties = list_cert_properties(session, papiObject, everyGroup, [])
+                for every_property in list_of_properties:
+                    all_properties.append(every_property)
+            elif args.groupId:
+                if args.groupId == everyGroup['groupId']:
+                    root_logger.info('  ..Found the group: ' + str(args.groupId))
+                    all_properties = list_cert_properties(session, papiObject, everyGroup, [])                      
+            elif args.groupName:
+                if args.groupName in everyGroup['groupName']:
+                    root_logger.info('  ..Found the group: ' + str(args.groupId))
+                    all_properties = list_cert_properties(session, papiObject, everyGroup, [])  
+        
+        #Loop through all properties
+        for every_property in all_properties:
+            if every_property['productionVersion'] is 'None':
+                #Create a case
+                case_body = '''
+                    {
+                        "severity": "2-Major",
+                        "subject": "Property version being NULL",
+                        "description": "Property version being NULL",
+                        "categoryType": "Technical",
+                        "questionnaire": {
+                            "questionnaireId": "100",
+                            "questions": [
+                                {
+                                    "questionId": "670",
+                                    "currentAnswers": [
+                                        "2015-11-29T11:58:53.273Z"
+                                    ]
+                                },
+                                {
+                                    "questionId": "671",
+                                    "currentAnswers": [
+                                        "986"
+                                    ]
+                                }
+                            ]
+                        },
+                        "userDetail": {
+                            "userName": "Customer name",
+                            "userPhone": "080398137489",
+                            "userEmail": "acn@akamai.com",
+                            "userCompany": "Software"
+                        },
+                        "subCategories": [
+                            {
+                                "displayName": "Product",
+                                "subCategoryType": "product",
+                                "subCategoryValue": "Alta"
+                            },
+                            {
+                                "displayName": "Problem",
+                                "subCategoryType": "problem",
+                                "subCategoryValue": "Alerts"
+                            }
+                        ]
+                    }
+                '''
+
+                print('Creating a case now...')
+                caseResponse = papiObject.createCase(session, case_body)
+                if caseResponse.status_code == 200:
+                    print('Case created with case ID: ' + caseResponse.json()['caseId'])
+                else:
+                    print('Failed to create Akatec case')
+            else:
+                #All versions are fine
+                pass
+            
+    else:
+        root_logger.info('Unable to fetch group details\n')                        
+
 
 
 def get_prog_name():
