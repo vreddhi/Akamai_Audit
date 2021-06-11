@@ -696,7 +696,7 @@ def create_case(args):
         
         #Loop through all properties
         for every_property in all_properties:
-            if every_property['productionVersion'] is 'None':
+            if every_property['productionVersion'] is None:
                 #Create a case
                 case_body = '''
                     {
@@ -722,10 +722,10 @@ def create_case(args):
                             ]
                         },
                         "userDetail": {
-                            "userName": "Customer name",
+                            "userName": "Salesforce IAT",
                             "userPhone": "080398137489",
-                            "userEmail": "acn@akamai.com",
-                            "userCompany": "Software"
+                            "userEmail": "dl-salesforce-iat@akamai.com",
+                            "userCompany": "Akamai"
                         },
                         "subCategories": [
                             {
