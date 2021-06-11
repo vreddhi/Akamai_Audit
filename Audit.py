@@ -702,7 +702,7 @@ def create_case(args):
                     {
                         "severity": "2-Major",
                         "subject": "Property version being NULL",
-                        "description": "Property version being NULL",
+                        "description": "Property version being NULL in %s",
                         "categoryType": "Technical",
                         "questionnaire": {
                             "questionnaireId": "100",
@@ -740,9 +740,9 @@ def create_case(args):
                             }
                         ]
                     }
-                '''
+                ''' %(every_property['propertyName'])
 
-                print('Creating a case now...')
+                print('Creating a case for ' + every_property['propertyName'] + ' now...')
                 caseResponse = papiObject.createCase(session, case_body)
                 if caseResponse.status_code == 200:
                     print('Case created with case ID: ' + caseResponse.json()['caseId'])
@@ -750,6 +750,7 @@ def create_case(args):
                     print('Failed to create Akatec case')
             else:
                 #All versions are fine
+                print('All properties are fine. No case created')
                 pass
             
     else:
