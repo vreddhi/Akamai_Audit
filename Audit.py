@@ -31,7 +31,7 @@ import os
 import logging
 import helper
 import re
-import dns.resolver 
+#import dns.resolver 
 import subprocess
 import datetime
 from datetime import date
