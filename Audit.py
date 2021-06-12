@@ -36,7 +36,7 @@ import subprocess
 import datetime
 from datetime import date
 import dns
-from dns import resolver
+#from dns import resolver
 
 
 PACKAGE_VERSION = "1.0.8"
