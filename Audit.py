@@ -1,5 +1,5 @@
 """
-Copyright 2017 Akamai Technologies, Inc. All Rights Reserved.
+Copyright 2021 Akamai Technologies, Inc. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -31,12 +31,9 @@ import os
 import logging
 import helper
 import re
-#import dns.resolver 
 import subprocess
 import datetime
 from datetime import date
-import dns
-#from dns import resolver
 
 
 PACKAGE_VERSION = "1.0.8"
@@ -135,6 +132,12 @@ def cli():
 
     actions["list_properties"] = create_sub_command(
         subparsers, "list-properties", "List all the properties",
+        [{"name": "groupId", "help": "Group Id. It may or maynot have the grp_ prefix"},
+         {"name": "groupName", "help": "Name of the Group"}],
+        [])
+
+    actions["waf_coverage"] = create_sub_command(
+        subparsers, "waf-coverage", "List all the properties",
         [{"name": "groupId", "help": "Group Id. It may or maynot have the grp_ prefix"},
          {"name": "groupName", "help": "Name of the Group"}],
         [])
@@ -457,8 +460,6 @@ def list_properties(args):
     access_hostname, session = init_config(args.edgerc, args.section)
     papiObject = PapiWrapper(access_hostname, args.account_key)
     all_properties = []
-    table = PrettyTable(['Group Name', 'Group ID'])
-    table.align = "l"
 
     groupsResponse = papiObject.getGroups(session)
     #Find the property details (IDs)
@@ -503,9 +504,6 @@ def list_properties(args):
 def check_hostnames(args):
     access_hostname, session = init_config(args.edgerc, args.section)
     papiObject = PapiWrapper(access_hostname, args.account_key)
-
-    table = PrettyTable(['Hostname', 'Configuration Name',' Property Id', 'Group ID','EdgeHostname','Waf Status'])
-    table.align = "l"
 
     hostnames = args.hostnames.replace(',',':').replace(' ',':').replace('::',':').split(':')
     
@@ -558,7 +556,6 @@ def check_hostnames(args):
 
     #Tabulate after processing all hostnames
     tabulate(title, columns, final_data, 'hostnames.html') 
-
 
 def check_cert_expiry(args):
     access_hostname, session = init_config(args.edgerc, args.section)
@@ -629,10 +626,17 @@ def check_cert_expiry(args):
                         individual_item['CAA'] = 'N/A'
                         try:
                             domain = every_hostname.partition(".")[-1]
-                            result = dns.resolver.query(domain, 'CAA')
-                            for val in result:
-                                print('CAA: ', val.to_text())
-                                individual_item['CAA'] =  val.to_text()
+                            dns_request = 'https://dns.google/resolve?name=' + domain + '&type=caa&do=0'
+                            result = requests.get(dns_request)
+                            if result.status_code == 200:
+                                if 'Answer' in result.json():
+                                    print('CAA: ' + result.json()['Answer'][0]['data'])
+                                    individual_item['CAA'] =  result.json()['Answer'][0]['data']
+                                else:
+                                    print('             ..CAA record not found for: ' + domain)            
+                            else:
+                                print('Google DNS errored out')
+
                         except:
                             print('             ..CAA record not found for: ' + domain)        
 
@@ -667,7 +671,6 @@ def check_cert_expiry(args):
             
     else:
         root_logger.info('Unable to fetch group details\n')                        
-
 
 def create_case(args):
     access_hostname, session = init_config(args.edgerc, args.section)
@@ -756,6 +759,63 @@ def create_case(args):
     else:
         root_logger.info('Unable to fetch group details\n')                        
 
+def waf_coverage(args):
+    access_hostname, session = init_config(args.edgerc, args.section)
+    papiObject = PapiWrapper(access_hostname, args.account_key)
+    all_properties = []
+
+    groupsResponse = papiObject.getGroups(session)
+    #Find the property details (IDs)
+    if groupsResponse.status_code == 200:
+        groupsResponseDetails = groupsResponse.json()
+        root_logger.info('Total of ' + str(len(groupsResponseDetails['groups']['items'])) + ' groups found')
+
+        groupcount = 1
+        for everyGroup in groupsResponseDetails['groups']['items']:
+            if groupcount < 5:
+                if not args.groupId and not args.groupName:
+                    list_of_properties = process_properties(session, papiObject, everyGroup, [])
+                    for every_property in list_of_properties:
+                        all_properties.append(every_property)
+                elif args.groupId:
+                    if args.groupId == everyGroup['groupId']:
+                        root_logger.info('  ..Found the group: ' + str(args.groupId))
+                        all_properties = process_properties(session, papiObject, everyGroup, [])                      
+                elif args.groupName:
+                    if args.groupName in everyGroup['groupName']:
+                        root_logger.info('  ..Found the group: ' + str(args.groupId))
+                        all_properties = process_properties(session, papiObject, everyGroup, [])  
+                groupcount = groupcount + 1
+
+        if len(all_properties) > 0:
+            hostnames = []
+            for every_property in all_properties:
+                #hostnames = [hostname for hostname in every_property['prd_hostnames']]
+                if 'prd_hostnames' in every_property:
+                    hostnames = hostnames + every_property['prd_hostnames']
+            root_logger.info(json.dumps(hostnames, indent=4))    
+        else:
+            root_logger.info('      ..Unable to find hostnames')    
+            
+        columns = '''
+                    [
+                        {title:"Property Name", field:"propertyName", headerFilter:"input"},
+                        {title:"Group ID", field:"groupId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Group Name", field:"groupName", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Contract ID", field:"contractId", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Version", field:"latestVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Latest Hostnames", field:"lat_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Staging Version", field:"stagingVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Staging Hostnames", field:"stg_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                        {title:"Production Version", field:"productionVersion", hozAlign:"center", sorter:"date",  headerFilter:"input"},
+                        {title:"Production Hostnames", field:"prd_hostnames", hozAlign:"center", sorter:"date",  headerFilter:"input", formatter:"textarea"},
+                    ]
+        '''    
+        title = 'Property Audit Report'        
+        #tabulate(title, columns, all_properties, 'properties.html') 
+            
+    else:
+        root_logger.info('Unable to fetch group details\n')
 
 
 def get_prog_name():
