@@ -725,9 +725,9 @@ def create_case(args):
                             ]
                         },
                         "userDetail": {
-                            "userName": "Salesforce IAT",
-                            "userPhone": "080398137489",
-                            "userEmail": "dl-salesforce-iat@akamai.com",
+                            "userName": "IAT",
+                            "userPhone": "123456789",
+                            "userEmail": "dl@akamai.com",
                             "userCompany": "Akamai"
                         },
                         "subCategories": [
